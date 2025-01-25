@@ -1,0 +1,25 @@
+# Core dependencies
+librosa==0.10.2
+numpy>=1.25.0,<2.0.0
+numba>=0.59.1
+lazy-loader>=0.3
+
+# Audio processing
+soundfile>=0.12.1
+sounddevice>=0.5.0
+pytaglib>=3.0.0
+
+# CLI interface
+click>=8.1.8
+click-option-group>=0.5.6
+click-params>=0.5.0
+rich>=13.4.2
+rich-click>=1.8.0
+
+# GUI interface
+PyQt6>=6.4.0
+PyQt6-Qt6>=6.4.0
+PyQt6_sip>=13.9.1
+
+# Media download
+yt-dlp>=2024.8.6
