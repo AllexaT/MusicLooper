@@ -1,4 +1,4 @@
-# Music-Looper
+# MusicLooper
 
 A Python-based program for automatically finding the best loop points to achieve seamless music looping. Provides an easy-to-use graphical user interface.
 
