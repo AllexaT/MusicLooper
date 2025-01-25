@@ -17,7 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [4.0] - 2025-01-25
 
-###Added
+### Added
 - GUI interface with support for drag-and-drop music files
 - Automatic detection of music loop points
 - Real-time preview feature to listen to loop effects
@@ -28,7 +28,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Automatic detection of system FFmpeg, with download option if not available
 - Support for local FFmpeg folder
 
-###Features
+### Features
 - Modern interface developed with PyQt6
 - Analyzes music structure to find the best loop points
 - Real-time audio processing and seamless loop playback
