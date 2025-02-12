@@ -30,7 +30,7 @@ A Python-based program for automatically finding the best loop points to achieve
 
 Music-Looper requires the following software to run:
 
-- [Python (64-bit)](https://www.python.org/downloads/) >= 3.9
+- [Python (64-bit)](https://www.python.org/downloads/) = 3.12.x
 - [Git](https://git-scm.com/downloads) (for downloading source code)
 - [FFmpeg](https://ffmpeg.org/download.html) (for audio processing)
 
@@ -177,7 +177,7 @@ Available in [CHANGELOG.md](CHANGELOG.md)
 
 Music-Looper 需要以下軟體才能運行：
 
-- [Python (64位元)](https://www.python.org/downloads/) >= 3.9
+- [Python (64位元)](https://www.python.org/downloads/) = 3.12.x
 - [Git](https://git-scm.com/downloads)（用於下載原始碼）
 - [FFmpeg](https://ffmpeg.org/download.html)（用於音訊處理）
 
