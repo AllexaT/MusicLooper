@@ -134,7 +134,7 @@ After installation, you can run the program by:
 ## Troubleshooting
 
 If you encounter issues:
-1. Verify Python version is 3.9 or newer
+1. Verify Python version is 3.12.x
 2. Confirm all required packages are properly installed
 3. Check if audio file format is supported
 4. Ensure virtual environment is activated (if using)
@@ -282,7 +282,7 @@ MusicLooper/
 ## 疑難排解
 
 如果遇到問題：
-1. 確認 Python 版本是 3.9 或更新版本
+1. 確認 Python 版本是 3.12.x
 2. 確認所有必要套件都已正確安裝
 3. 檢查音訊檔案格式是否受支援
 4. 確保虛擬環境已啟動（如果使用）
