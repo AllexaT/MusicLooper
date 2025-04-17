@@ -144,7 +144,11 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "download_complete": "下載完成，正在處理中...",
         "processing_step": "正在處理: {}",
         "processing_complete": "處理完成！",
-        "cancel": "取消"
+        "cancel": "取消",
+        "enhancement_options": "增強選項",
+        "structure": "結構",
+        "chord": "和弦",
+        "mfcc": "MFCC"
     },
     "en": {
         "window_title": "MusicLooper", 
@@ -153,7 +157,7 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "youtube_url": "Enter YouTube URL...",
         "download_btn": "Download",
         "settings_group": "Analysis Settings",
-        "min_duration": "Min Duration Ratio:",
+        "min_duration": "Min Duration Ratio",
         "columns": ["Start", "End", "Length", "Score"],
         "playback_group": "Playback Control",
         "volume": "Volume:",
@@ -183,7 +187,11 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "download_complete": "Download complete, processing...",
         "processing_step": "Processing: {}",
         "processing_complete": "Processing complete!",
-        "cancel": "Cancel"
+        "cancel": "Cancel",
+        "enhancement_options": "Enhance Options",
+        "structure": "Struct",
+        "chord": "Chord",
+        "mfcc": "MFCC"
     }
 }
 
@@ -229,8 +237,8 @@ class MainWindow(QMainWindow):
             is_chinese = False
             if current_locale:
                 current_locale = current_locale.lower()
-                #chinese_locales = ['zh', 'zh_tw', 'zh_hk', 'zh_cn', 'zh_sg', 'zh_mo']
-                chinese_locales = ['zh', 'zh_tw', 'zh_hk', 'zh_cn', 'zh_sg', 'zh_mo','chinese (traditional)_taiwan']
+                chinese_locales = ['zh', 'zh_tw', 'zh_hk', 'zh_cn', 'zh_sg', 'zh_mo']
+                #chinese_locales = ['zh', 'zh_tw', 'zh_hk', 'zh_cn', 'zh_sg', 'zh_mo','chinese (traditional)_taiwan']
                 is_chinese = any(current_locale.startswith(loc) for loc in chinese_locales)
                 
             # 設定語言
@@ -285,7 +293,27 @@ class MainWindow(QMainWindow):
         self.min_duration = QDoubleSpinBox()
         self.min_duration.setValue(0.35)
         settings_layout.addRow(self.tr["min_duration"], self.min_duration)
+        # 增強選項勾選（水平排列，不顯示原始分數）
+        self.score_checkboxes = {}
+        score_hbox = QHBoxLayout()
+        for key, label_key in [
+            ('structure', "structure"),
+            ('chord', "chord"),
+            ('mfcc', "mfcc")
+        ]:
+            self.score_checkboxes[key] = QCheckBox(self.tr[label_key])
+            self.score_checkboxes[key].setChecked(False)
+            self.score_checkboxes[key].setMinimumWidth(65)
+            score_hbox.addWidget(self.score_checkboxes[key])
+            # 在勾選框之間添加間距，除了最後一個
+            if label_key != "mfcc": # 假設 'mfcc' 是最後一個
+                score_hbox.addSpacing(0) # 添加 15 像素間距
+        score_hbox.addStretch(1) # 將空白推到右邊
+        settings_layout.addRow(self.tr["enhancement_options"], score_hbox)
         settings_group.setLayout(settings_layout)
+        # 綁定勾選事件
+        for cb in self.score_checkboxes.values():
+            cb.stateChanged.connect(self.update_scores_and_table)
         
         # 結果列表 - 添加選擇功能
         self.results = QTableWidget()
@@ -390,7 +418,7 @@ class MainWindow(QMainWindow):
 
     def browse_file(self):
         path, _ = QFileDialog.getOpenFileName(self, self.tr["select_file"], "", 
-            "音訊檔案 (*.mp3 *.wav *.ogg *.flac)")
+            "音訊檔案 (*.mp3 *.wav *.ogg *.flac *.opus)")
         if path:
             self.path_edit.setText(path)
             # 選擇檔案後自動分析
@@ -424,55 +452,57 @@ class MainWindow(QMainWindow):
                     if i == 30:
                         self.music_looper = MusicLooper(self.path_edit.text())
                     if i == 60:
+                        # 原始分數必定納入，進階分數依勾選
+                        score_items = ['structure', 'chord', 'mfcc']
+                        checked = ['original'] + [k for k in score_items if self.score_checkboxes[k].isChecked()]
+                        weight = 1.0 / len(checked)
+                        score_weights = {k: (weight if k in checked else 0.0) for k in ['original'] + score_items}
                         loops = self.music_looper.find_loop_pairs(
-                            min_duration_multiplier=self.min_duration.value()
+                            min_duration_multiplier=self.min_duration.value(),
+                            score_weights=score_weights
                         )
-                
-                # 更新結果表格
-                self.results.setSortingEnabled(False)  # 暫時關閉排序功能
-                try:
-                    self.results.setRowCount(len(loops))
-                    
-                    # 先根據分數排序迴圈
-                    sorted_loops = sorted(enumerate(loops), key=lambda x: x[1].score, reverse=True)
-                    
-                    for rank, (original_index, loop) in enumerate(sorted_loops):
-                        start_time = self.music_looper.samples_to_seconds(loop.loop_start)
-                        end_time = self.music_looper.samples_to_seconds(loop.loop_end)
-                        duration = end_time - start_time
-                        
-                        # 使用自定義 TableWidgetItem 來正確排序數值
-                        items = [
-                            NumericTableItem(f"{start_time:.2f}"),
-                            NumericTableItem(f"{end_time:.2f}"), 
-                            NumericTableItem(f"{duration:.2f}"),
-                            NumericTableItem(f"{loop.score:.2%}")
-                        ]
-                        
-                        for col, item in enumerate(items):
-                            self.results.setItem(rank, col, item)
-                            
-                        # 設定垂直標題為排名
-                        self.results.setVerticalHeaderItem(rank, QTableWidgetItem(str(rank)))
-                            
-                finally:
-                    self.results.setSortingEnabled(True)  # 恢復排序功能
-                    
-                    # 設定預設排序為分數欄位（降序）
-                    self.results.sortItems(3, Qt.SortOrder.AscendingOrder)
-                    
-                    # 連接排序變更信號
-                    self.results.horizontalHeader().sortIndicatorChanged.connect(self.update_row_numbers)
-                
-                # 強制更新表格
-                self.results.viewport().update()
-                
+                        self.all_loops = loops  # 儲存所有 LoopPair
+                self.update_scores_and_table()
             finally:
-                # 恢復信號
                 self.results.blockSignals(False)
-                
         except Exception as e:
             self.show_error(str(e))
+
+    def update_scores_and_table(self):
+        # 取得勾選狀態
+        score_items = ['structure', 'chord', 'mfcc']
+        checked = ['original'] + [k for k in score_items if self.score_checkboxes[k].isChecked()]
+        weight = 1.0 / len(checked)
+        score_weights = {k: (weight if k in checked else 0.0) for k in ['original'] + score_items}
+        # 重新加權分數
+        for loop in getattr(self, 'all_loops', []):
+            loop.score = (
+                score_weights['original'] * getattr(loop, 'original_score', 0) +
+                score_weights['structure'] * getattr(loop, 'structure_score', 0) +
+                score_weights['chord'] * getattr(loop, 'chord_score', 0) +
+                score_weights['mfcc'] * getattr(loop, 'mfcc_score', 0)
+            )
+        # 重新排序
+        sorted_loops = sorted(enumerate(getattr(self, 'all_loops', [])), key=lambda x: x[1].score, reverse=True)
+        self.results.setSortingEnabled(False)
+        try:
+            self.results.setRowCount(len(sorted_loops))
+            for rank, (original_index, loop) in enumerate(sorted_loops):
+                start_time = self.music_looper.samples_to_seconds(loop.loop_start)
+                end_time = self.music_looper.samples_to_seconds(loop.loop_end)
+                duration = end_time - start_time
+                items = [
+                    NumericTableItem(f"{start_time:.2f}"),
+                    NumericTableItem(f"{end_time:.2f}"),
+                    NumericTableItem(f"{duration:.2f}"),
+                    NumericTableItem(f"{loop.score:.2%}")
+                ]
+                for col, item in enumerate(items):
+                    self.results.setItem(rank, col, item)
+                self.results.setVerticalHeaderItem(rank, QTableWidgetItem(str(rank)))
+        finally:
+            self.results.setSortingEnabled(True)
+            self.results.viewport().update()
 
     def format_time(self, seconds):
         """將秒數格式化為 mm:ss 格式"""

@@ -41,6 +41,11 @@ class YoutubeDownloader:
         self.cancel_check = cancel_check
         cleaned_url = self._clean_url(url)
         
+        # 建立 Download 資料夾
+        download_path = os.path.join(os.path.dirname(__file__), "Download")
+        if not os.path.exists(download_path):
+            os.makedirs(download_path)
+        
         ydl_opts = {
             "logger": YtdLogger(),
             "format": "bestaudio/best",
@@ -63,7 +68,8 @@ class YoutubeDownloader:
                     "key": "FFmpegExtractAudio",
                 },
             ],
-            "paths": {"home": output_path, "temp": output_path},
+            # 修改下載路徑到 Download 資料夾
+            "paths": {"home": download_path, "temp": download_path},
             "progress_hooks": [self.progress_hook],
             "postprocessor_hooks": [self.postprocessor_hook],
         }

@@ -1,7 +1,7 @@
 import logging
 import time
 from dataclasses import dataclass
-from typing import List, Optional, Tuple
+from typing import List, Optional, Tuple, Dict
 
 import librosa
 import numpy as np
@@ -19,6 +19,9 @@ class LoopPair:
         loop_end: int (exact loop end position in samples)
         note_distance: float
         loudness_difference: float
+        structure_score: float
+        chord_score: float
+        mfcc_score: float
         score: float. Defaults to 0.
     """
 
@@ -26,9 +29,13 @@ class LoopPair:
     _loop_end_frame_idx: int
     note_distance: float
     loudness_difference: float
+    structure_score: float = 0
+    chord_score: float = 0
+    mfcc_score: float = 0
     score: float = 0
     loop_start: int = 0
     loop_end: int = 0
+    original_score: float = 0
 
 
 def find_best_loop_points(
@@ -40,6 +47,7 @@ def find_best_loop_points(
     approx_loop_end: Optional[float] = None,
     brute_force: bool = False,
     disable_pruning: bool = False,
+    score_weights: dict = None,
 ) -> List[LoopPair]:
     """Finds the best loop points for a given audio track, given the constraints specified
 
@@ -52,6 +60,7 @@ def find_best_loop_points(
         approx_loop_end (float, optional): The approximate location of the desired loop end (in seconds). If specified, must specify approx_loop_start as well. Defaults to None.
         brute_force (bool, optional): Checks the entire track instead of the detected beats (disclaimer: runtime may be significantly longer). Defaults to False.
         disable_pruning (bool, optional): Returns all the candidate loop points without filtering. Defaults to False.
+        score_weights (dict, optional): The weights for the advanced scoring. Defaults to None.
     Raises:
         LoopNotFoundError: raised in case no loops were found
 
@@ -74,6 +83,9 @@ def find_best_loop_points(
 
     # Loop points must be at least 1 frame apart
     min_loop_duration = max(1, min_loop_duration)
+
+    # 進行音樂結構分析
+    structure_info = analyze_music_structure(mlaudio)
 
     if approx_loop_start is not None and approx_loop_end is not None:
         # Skipping the unnecessary beat analysis (in this case) speeds up the analysis runtime by ~2x
@@ -169,7 +181,7 @@ def find_best_loop_points(
         )
 
     filtered_candidate_pairs = _assess_and_filter_loop_pairs(
-        mlaudio, chroma, bpm, candidate_pairs, disable_pruning
+        mlaudio, chroma, bpm, candidate_pairs, structure_info, disable_pruning, score_weights
     )
 
     # prefer longer loops for highly similar sequences
@@ -332,7 +344,9 @@ def _assess_and_filter_loop_pairs(
     chroma: np.ndarray,
     bpm: float,
     candidate_pairs: List[LoopPair],
+    structure_info: Dict,
     disable_pruning: bool = False,
+    score_weights: dict = None,
 ) -> List[LoopPair]:
     """Assigns the scores to each loop pair and prunes the list of candidate loop pairs
 
@@ -341,7 +355,9 @@ def _assess_and_filter_loop_pairs(
         chroma (np.ndarray): The chroma spectrogram
         bpm (float): The estimated bpm/tempo of the track
         candidate_pairs (List[LoopPair]): The list of candidate loop pairs found
+        structure_info (Dict): The music structure analysis information
         disable_pruning (bool, optional): Returns all the candidate loop points without filtering. Defaults to False.
+        score_weights (dict, optional): The weights for the advanced scoring. Defaults to None.
 
     Returns:
         List[LoopPair]: A scored and filtered list of valid loop candidate pairs
@@ -351,11 +367,9 @@ def _assess_and_filter_loop_pairs(
     seconds_to_test = num_test_beats / beats_per_second
     test_offset = mlaudio.samples_to_frames(int(seconds_to_test * mlaudio.rate))
 
-    # adjust offset for very short tracks to 25% of its length
     if test_offset > chroma.shape[-1]:
         test_offset = chroma.shape[-1] // 4
 
-    # Prune candidates if there are too many
     if len(candidate_pairs) >= 100 and not disable_pruning:
         pruned_candidate_pairs = _prune_candidates(candidate_pairs)
     else:
@@ -363,21 +377,41 @@ def _assess_and_filter_loop_pairs(
 
     weights = _weights(test_offset, start=max(2, test_offset // num_test_beats), stop=1)
 
-    pair_score_list = [
-        _calculate_loop_score(
+    # 預先計算所有分數
+    for pair in pruned_candidate_pairs:
+        # 原始分數
+        original_score = _calculate_loop_score(
             int(pair._loop_start_frame_idx),
             int(pair._loop_end_frame_idx),
             chroma,
             test_duration=test_offset,
             weights=weights,
         )
-        for pair in pruned_candidate_pairs
-    ]
-    # Add cosine similarity as score
-    for pair, score in zip(pruned_candidate_pairs, pair_score_list):
-        pair.score = score
-
-    # re-sort based on new score
+        pair.original_score = original_score
+        # 結構分數
+        structure_score = _evaluate_structure_similarity(
+            int(pair._loop_start_frame_idx),
+            int(pair._loop_end_frame_idx),
+            structure_info['segments']
+        )
+        pair.structure_score = structure_score
+        # 和弦分數
+        chord_score = _evaluate_chord_progression(
+            int(pair._loop_start_frame_idx),
+            int(pair._loop_end_frame_idx),
+            structure_info['chord_labels'],
+        )
+        pair.chord_score = chord_score
+        # MFCC分數
+        mfcc_score = _evaluate_mfcc_similarity(
+            int(pair._loop_start_frame_idx),
+            int(pair._loop_end_frame_idx),
+            structure_info['mfcc']
+        )
+        pair.mfcc_score = mfcc_score
+        # 預設分數為原始分數
+        pair.score = original_score
+    # 預設排序為原始分數
     pruned_candidate_pairs = sorted(
         pruned_candidate_pairs, reverse=True, key=lambda x: x.score
     )
@@ -533,6 +567,146 @@ def _calculate_subseq_beat_similarity(
 def _weights(length: int, start: int = 100, stop: int = 1):
     return np.geomspace(start, stop, num=length)
 
+
+def analyze_music_structure(mlaudio: MLAudio) -> Dict:
+    """分析音樂的基本結構，找出重複段落和主題部分
+
+    Args:
+        mlaudio (MLAudio): MLAudio 物件，包含音訊數據
+
+    Returns:
+        Dict: 包含音樂結構分析結果的字典，包括：
+            - segments: 音樂段落的邊界點
+            - similarity_matrix: 自相似矩陣
+            - chord_features: 和弦特徵
+            - chord_labels: 和弦標籤序列
+            - mfcc: MFCC特徵
+    """
+    # 計算梅爾頻譜圖
+    S = librosa.feature.melspectrogram(
+        y=mlaudio.audio, 
+        sr=mlaudio.rate,
+        n_mels=128,
+        fmax=8000
+    )
+    
+    # 計算音樂的自相似矩陣
+    similarity_matrix = librosa.segment.recurrence_matrix(
+        S,
+        mode='affinity',
+        sym=True
+    )
+    
+    # 使用 librosa 的 laplacian segmentation 找出段落
+    segments = librosa.segment.agglomerative(S, k=8)
+    
+    # 計算和弦特徵
+    chromagram = librosa.feature.chroma_cqt(
+        y=mlaudio.audio, 
+        sr=mlaudio.rate
+    )
+    chord_features = np.sum(chromagram, axis=1)
+    
+    # 新增：和弦標籤序列
+    chord_labels = _detect_chord_labels(chromagram, mlaudio.rate)
+    
+    # 新增MFCC特徵
+    mfcc = librosa.feature.mfcc(
+        y=mlaudio.audio,
+        sr=mlaudio.rate,
+        n_mfcc=13,
+        hop_length=512
+    )
+    
+    return {
+        'segments': segments,
+        'similarity_matrix': similarity_matrix,
+        'chord_features': chord_features,
+        'chord_labels': chord_labels,
+        'mfcc': mfcc
+    }
+
+def _softmax(x, axis=0):
+    e_x = np.exp(x - np.max(x, axis=axis, keepdims=True))
+    return e_x / np.sum(e_x, axis=axis, keepdims=True)
+
+def _detect_chord_labels(chromagram, sr):
+    maj_template = np.array([1, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0])
+    min_template = np.array([1, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0])
+    templates = []
+    labels = []
+    for i in range(12):
+        templates.append(np.roll(maj_template, i))
+        labels.append(librosa.midi_to_note(60 + i, unicode=False)[:-1] + ':maj')
+    for i in range(12):
+        templates.append(np.roll(min_template, i))
+        labels.append(librosa.midi_to_note(60 + i, unicode=False)[:-1] + ':min')
+    templates = np.stack(templates)
+    scores = np.dot(templates, chromagram)
+    scores = _softmax(scores, axis=0)  # 修正：轉為機率分布
+    transition_matrix = np.ones((24, 24)) / 24
+    path = librosa.sequence.viterbi(scores, transition_matrix)
+    chord_labels = [labels[i] for i in path]
+    return chord_labels
+
+def _evaluate_structure_similarity(
+    loop_start: int,
+    loop_end: int,
+    segments: np.ndarray,
+    threshold: int = 1000
+) -> float:
+    """評估迴圈點在音樂結構上的相似度
+
+    Args:
+        loop_start (int): 迴圈開始點
+        loop_end (int): 迴圈結束點
+        segments (np.ndarray): 段落邊界點陣列
+        threshold (int, optional): 判定接近段落邊界的閾值. Defaults to 1000.
+
+    Returns:
+        float: 結構相似度分數 (0.0 到 1.0)
+    """
+    similarity_score = 0.0
+    
+    # 檢查迴圈點是否在合適的段落邊界
+    for segment in segments:
+        if abs(loop_start - segment) < threshold:
+            similarity_score += 0.5
+        if abs(loop_end - segment) < threshold:
+            similarity_score += 0.5
+            
+    # 標準化分數到 0-1 範圍
+    return min(1.0, similarity_score)
+
+def _evaluate_chord_progression(
+    loop_start: int,
+    loop_end: int,
+    chord_labels: list,
+    window_size: int = 2
+) -> float:
+    """更強的和弦進行相似度：比較 loop_start/loop_end 前後的和弦標籤是否一致"""
+    start_chord = chord_labels[max(0, loop_start - window_size):loop_start + window_size]
+    end_chord = chord_labels[max(0, loop_end - window_size):loop_end + window_size]
+    # 只要有重疊的和弦標籤就給高分
+    if set(start_chord) & set(end_chord):
+        return 1.0
+    return 0.0
+
+def _evaluate_mfcc_similarity(
+    loop_start: int,
+    loop_end: int,
+    mfcc: np.ndarray,
+    window_size: int = 4
+) -> float:
+    """評估迴圈點的 MFCC 音色相似度"""
+    start_window = mfcc[:, max(0, loop_start - window_size):loop_start]
+    end_window = mfcc[:, loop_end:min(mfcc.shape[1], loop_end + window_size)]
+    if start_window.shape[1] == 0 or end_window.shape[1] == 0:
+        return 0.0
+    start_vec = np.mean(start_window, axis=1)
+    end_vec = np.mean(end_window, axis=1)
+    sim = np.dot(start_vec, end_vec) / (np.linalg.norm(start_vec) * np.linalg.norm(end_vec) + 1e-8)
+    return max(0.0, sim)
 
 @njit(cache=True)
 def nearest_zero_crossing(audio: np.ndarray, rate: int, sample_idx: int) -> int:

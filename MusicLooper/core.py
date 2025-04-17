@@ -35,6 +35,7 @@ class MusicLooper:
         approx_loop_end: Optional[float] = None,
         brute_force: bool = False,
         disable_pruning: bool = False,
+        score_weights: dict = None,
     ) -> List[LoopPair]:
         """Finds the best loop points for the track, according to the parameters specified.
 
@@ -46,6 +47,7 @@ class MusicLooper:
             approx_loop_end (float, optional): The approximate location of the desired loop end (in seconds). If specified, must specify approx_loop_start as well. Defaults to None.
             brute_force (bool, optional): Checks the entire track instead of the detected beats (disclaimer: runtime may be significantly longer). Defaults to False.
             disable_pruning (bool, optional): Returns all the candidate loop points without filtering. Defaults to False.
+            score_weights (dict, optional): Custom score weights for each score type.
         
         Raises:
             LoopNotFoundError: raised in case no loops were found
@@ -61,7 +63,8 @@ class MusicLooper:
             approx_loop_start=approx_loop_start,
             approx_loop_end=approx_loop_end,
             brute_force=brute_force,
-            disable_pruning=disable_pruning
+            disable_pruning=disable_pruning,
+            score_weights=score_weights
         )
 
     @property
