@@ -237,8 +237,8 @@ class MainWindow(QMainWindow):
             is_chinese = False
             if current_locale:
                 current_locale = current_locale.lower()
-                chinese_locales = ['zh', 'zh_tw', 'zh_hk', 'zh_cn', 'zh_sg', 'zh_mo']
-                #chinese_locales = ['zh', 'zh_tw', 'zh_hk', 'zh_cn', 'zh_sg', 'zh_mo','chinese (traditional)_taiwan']
+                #chinese_locales = ['zh', 'zh_tw', 'zh_hk', 'zh_cn', 'zh_sg', 'zh_mo']
+                chinese_locales = ['zh', 'zh_tw', 'zh_hk', 'zh_cn', 'zh_sg', 'zh_mo','chinese (traditional)_taiwan']
                 is_chinese = any(current_locale.startswith(loc) for loc in chinese_locales)
                 
             # 設定語言
