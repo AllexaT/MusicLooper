@@ -21,7 +21,7 @@ A Python-based program for automatically finding the best loop points to achieve
 
 </td>
 <td width="40%">
-<p align="center"><img src="./picture/screenshot-interface.png" width="60%" alt="Interface Screenshot"></p>
+<p align="center"><img src="./picture/Interface.png" width="60%" alt="Interface Screenshot"></p>
 </td>
 </tr>
 </table>
