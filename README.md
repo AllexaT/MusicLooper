@@ -168,7 +168,7 @@ Available in [CHANGELOG.md](CHANGELOG.md)
 - 將循環點作為中繼資料標籤匯出到音訊檔案
 </td>
 <td width="40%">
-<p align="center"><img src="./picture/軟體介面.png" width="60%" alt="Interface Screenshot"></p>
+<p align="center"><img src="./picture/軟體介面.png" width="60%" alt="節圖畫面"></p>
 </td>
 </tr>
 </table>
