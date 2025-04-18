@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "musiclooper"
 version = "1.2.0"
-description = "A Python-based program for automatically finding the best loop points to achieve seamless music looping with a graphical user interface."
+description = "A Python program with a user-friendly GUI for repeating music endlessly and creating seamless music loops."
 packages = [
     { include = "MusicLooper" }
 ]
