@@ -1,6 +1,6 @@
 [tool.poetry]
-name = "music-looper"
-version = "1.0.0"
+name = "musiclooper"
+version = "1.2.0"
 description = "A Python-based program for automatically finding the best loop points to achieve seamless music looping with a graphical user interface."
 packages = [
     { include = "MusicLooper" }
@@ -13,9 +13,6 @@ classifiers = [
   "Operating System :: OS Independent",
   "Programming Language :: Python",
   "Programming Language :: Python :: 3 :: Only",
-  "Programming Language :: Python :: 3.9",
-  "Programming Language :: Python :: 3.10",
-  "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
   "Topic :: Multimedia :: Sound/Audio",
   "Topic :: Multimedia :: Sound/Audio :: Analysis",
