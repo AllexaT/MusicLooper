@@ -2,7 +2,7 @@
 setlocal enabledelayedexpansion
 
 :: Set English messages
-set "LANG_PYTHON_NOT_FOUND=Python not found! Please install Python 3.x first"
+set "LANG_PYTHON_NOT_FOUND=Python not found! Please install Python 3.12 first"
 set "LANG_PYTHON_DOWNLOAD=You can download Python from https://www.python.org/downloads/"
 set "LANG_CREATING_VENV=Creating virtual environment..."
 set "LANG_VENV_FAILED=Failed to create virtual environment!"
