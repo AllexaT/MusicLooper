@@ -141,7 +141,7 @@ If you encounter issues:
 
 ## Acknowledgments
 
-Thanks to [ARKROW](https://github.com/ARKROW) for their contribution to this project. They laid important groundwork for this project. Their creativity and effort enabled this project to come to life and develop.
+Thanks to [ARKROW](https://github.com/ARKROW) for their significant contribution to this project. This project is **based on** their excellent work, [Pymusiclooper](https://github.com/ARKROW/PyMusicLooper). Their foundational efforts laid important groundwork and their creativity and effort enabled this project to come to life and develop.
 
 ## Version History
 
@@ -289,7 +289,7 @@ MusicLooper/
 
 ## 致謝
 
-感謝 [ARKROW](https://github.com/ARKROW) 對這個專案的貢獻。他們為這個專案奠定了重要的基礎。他們的創意和努力使這個專案得以實現和發展。
+感謝 [ARKROW](https://github.com/ARKROW) 對本專案做出的重大貢獻。本專案**基於**他們出色的專案 [Pymusiclooper](https://github.com/ARKROW/PyMusicLooper)。他們的基礎性工作為本專案奠定了重要基礎，而他們的創造力與努力則促使本專案得以實現與發展。
 
 ## 版本歷史
 
