@@ -23,3 +23,6 @@ PyQt6_sip>=13.9.1
 
 # Media download
 yt-dlp>=2024.8.6
+
+# System monitoring
+psutil>=5.9.8
