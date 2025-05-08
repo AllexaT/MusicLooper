@@ -2,7 +2,7 @@
 setlocal enabledelayedexpansion
 
 :: Set English messages
-set "LANG_PYTHON_NOT_FOUND=Python not found! Please install Python 3.12 first"
+set "LANG_PYTHON_NOT_FOUND=Python not found! Please install Python 3.x first"
 set "LANG_PYTHON_DOWNLOAD=You can download Python from https://www.python.org/downloads/"
 set "LANG_CREATING_VENV=Creating virtual environment..."
 set "LANG_VENV_FAILED=Failed to create virtual environment!"
@@ -44,6 +44,9 @@ if errorlevel 1 (
 )
 cls
 echo Environment setup completed
+
+:: Set LOKY_MAX_CPU_COUNT environment variable
+set "LOKY_MAX_CPU_COUNT=4"
 
 :: Run the program and close CMD window
 echo %LANG_STARTING%

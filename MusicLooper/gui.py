@@ -9,10 +9,41 @@ import locale
 from typing import Dict
 import base64
 import shutil
+import json
 
 # 設定 FFmpeg 路徑
 ffmpeg_path = os.path.join(os.path.dirname(__file__), "ffmpeg", "bin")
 os.environ["PATH"] = ffmpeg_path + os.pathsep + os.environ["PATH"]
+
+def load_translations() -> Dict[str, Dict[str, str]]:
+    """從 JSON 檔案載入翻譯文字"""
+    translations = {}
+    languages_dir = os.path.join(os.path.dirname(__file__), "languages")
+    
+    # 確保語言目錄存在
+    if not os.path.exists(languages_dir):
+        os.makedirs(languages_dir)
+    
+    # 讀取所有 JSON 檔案
+    for filename in os.listdir(languages_dir):
+        if filename.endswith('.json'):
+            language_code = filename[:-5]  # 移除 .json 副檔名
+            with open(os.path.join(languages_dir, filename), 'r', encoding='utf-8') as f:
+                translations[language_code] = json.load(f)
+    
+    return translations
+
+# 載入翻譯文字
+TRANSLATIONS = load_translations()
+
+# 如果沒有找到任何翻譯檔案，使用預設的英文翻譯
+if not TRANSLATIONS:
+    TRANSLATIONS = {
+        "en": {
+            "window_title": "MusicLooper",
+            # ... 其他預設英文翻譯 ...
+        }
+    }
 
 # 或者更完整的路徑處理:
 def setup_ffmpeg():
@@ -55,22 +86,10 @@ def show_ffmpeg_error():
         is_chinese = False
 
     # 根據語言選擇錯誤訊息
-    if is_chinese:
-        error_msg = (
-            "找不到 FFmpeg。請執行以下任一操作：\n\n"
-            "1. 安裝 FFmpeg 到系統並加入 PATH\n"
-            "2. 在程式目錄下建立 ffmpeg 資料夾並放入執行檔\n\n"
-            "是否要開啟 FFmpeg 下載頁面？"
-        )
-        title = "錯誤"
-    else:
-        error_msg = (
-            "FFmpeg not found. Please do one of the following:\n\n"
-            "1. Install FFmpeg to system and add to PATH\n"
-            "2. Create ffmpeg folder in program directory and put executables inside\n\n"
-            "Would you like to open the FFmpeg download page?"
-        )
-        title = "Error"
+    locale_code = 'zh_TW' if is_chinese else 'en'
+    translations = TRANSLATIONS.get(locale_code, TRANSLATIONS['en'])
+    error_msg = translations["ffmpeg_error_msg"]
+    title = translations["error"]
 
     # 顯示詢問對話框
     reply = QMessageBox.question(
@@ -104,96 +123,6 @@ def create_default_icon():
             f.write(base64.b64decode(icon_data))
     
     return icon_path
-
-# 定義語言字典
-TRANSLATIONS: Dict[str, Dict[str, str]] = {
-    "zh_TW": {
-        "window_title": "MusicLooper",
-        "file_group": "音訊檔案",
-        "browse_btn": "瀏覽...", 
-        "youtube_url": "輸入 YouTube 網址...",
-        "download_btn": "下載",
-        "settings_group": "分析設定",
-        "min_duration": "最小長度比率:",
-        "columns": ["起點", "終點", "長度", "分數"],
-        "playback_group": "播放控制",
-        "volume": "音量:",
-        "export_group": "導出功能",
-        "export_btn": "導出音樂",
-        "error": "錯誤",
-        "success": "成功",
-        "export_success": "已成功導出到: {}",
-        "select_file": "請選擇音訊檔案",
-        "analyzing": "正在分析音訊檔案...",
-        "processing": "處理中",
-        "analyze_first": "請先分析音訊檔案",
-        "select_loop": "請選擇要播放的迴圈點",
-        "enter_youtube": "請輸入 YouTube 網址",
-        "downloading": "正在下載音樂...",
-        "downloading_title": "下載中",
-        "download_failed": "下載失敗: {}",
-        "select_loop_export": "請選擇要導出的迴圈點",
-        "select_format": "選擇格式",
-        "select_format_prompt": "請選擇導出格式:",
-        "select_output": "選擇導出目錄",
-        "exporting": "正在導出音樂...",
-        "export_failed": "導出失敗: {}",
-        "initializing": "初始化下載中...",
-        "downloading_status": "下載中... {:.1f}MB / {:.1f}MB ({:.1f} MB/s)",
-        "downloading_status_no_total": "下載中... {:.1f}MB ({:.1f} MB/s)",
-        "download_complete": "下載完成，正在處理中...",
-        "processing_step": "正在處理: {}",
-        "processing_complete": "處理完成！",
-        "cancel": "取消",
-        "enhancement_options": "增強選項",
-        "structure": "結構",
-        "chord": "和弦",
-        "mfcc": "MFCC"
-    },
-    "en": {
-        "window_title": "MusicLooper", 
-        "file_group": "Audio File",
-        "browse_btn": "Browse...",
-        "youtube_url": "Enter YouTube URL...",
-        "download_btn": "Download",
-        "settings_group": "Analysis Settings",
-        "min_duration": "Min Duration Ratio",
-        "columns": ["Start", "End", "Length", "Score"],
-        "playback_group": "Playback Control",
-        "volume": "Volume:",
-        "export_group": "Export",
-        "export_btn": "Export Audio",
-        "error": "Error",
-        "success": "Success",
-        "export_success": "Successfully exported to: {}",
-        "select_file": "Please select an audio file",
-        "analyzing": "Analyzing audio file...", 
-        "processing": "Processing",
-        "analyze_first": "Please analyze an audio file first",
-        "select_loop": "Please select a loop point to play",
-        "enter_youtube": "Please enter a YouTube URL",
-        "downloading": "Downloading audio...",
-        "downloading_title": "Downloading",
-        "download_failed": "Download failed: {}",
-        "select_loop_export": "Please select a loop point to export",
-        "select_format": "Select Format", 
-        "select_format_prompt": "Select export format:",
-        "select_output": "Select Output Directory",
-        "exporting": "Exporting audio...",
-        "export_failed": "Export failed: {}",
-        "initializing": "Initializing download...",
-        "downloading_status": "Downloading... {:.1f}MB / {:.1f}MB ({:.1f} MB/s)",
-        "downloading_status_no_total": "Downloading... {:.1f}MB ({:.1f} MB/s)",
-        "download_complete": "Download complete, processing...",
-        "processing_step": "Processing: {}",
-        "processing_complete": "Processing complete!",
-        "cancel": "Cancel",
-        "enhancement_options": "Enhance Options",
-        "structure": "Struct",
-        "chord": "Chord",
-        "mfcc": "MFCC"
-    }
-}
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -424,44 +353,82 @@ class MainWindow(QMainWindow):
             # 選擇檔案後自動分析
             self.analyze()
 
+    def memory_decision_dialog(self, mem_info, strategy):
+        msg = self.tr["memory_warning_msg"].format(strategy['recommendation'])
+        options = [
+            self.tr["memory_option_1"],
+            self.tr["memory_option_2"],
+            self.tr["memory_option_3"]
+        ]
+        default = 1
+        choice, ok = QInputDialog.getItem(
+            self,
+            self.tr["memory_warning_title"],
+            msg,
+            options,
+            default,
+            False
+        )
+        if not ok:
+            return "2"  # 預設智慧分析
+        if choice.startswith("1"):
+            return "1"
+        elif choice.startswith("2"):
+            return "2"
+        else:
+            return "3"
+
     def analyze(self):
         if not self.path_edit.text():
             self.show_error(self.tr["select_file"])
             return
-            
         try:
-            # 如果正在播放音樂,先停止播放
             if self.playback_handler and self.playback_handler.is_playing:
                 self.stop_playback()
-            # 建立進度對話框 
             progress = QProgressDialog(self.tr["analyzing"], None, 0, 100, self)
             progress.setWindowTitle(self.tr["processing"])
             progress.setWindowModality(Qt.WindowModality.WindowModal)
             progress.setAutoClose(True)
             progress.setAutoReset(True)
             progress.setMinimumDuration(0)
-            
-            # 使用 blockSignals 避免重複繪製
             self.results.blockSignals(True)
-            
             try:
-                # 模擬進度
                 for i in range(101):
                     progress.setValue(i)
                     QApplication.processEvents()
                     if i == 30:
                         self.music_looper = MusicLooper(self.path_edit.text())
                     if i == 60:
-                        # 原始分數必定納入，進階分數依勾選
                         score_items = ['structure', 'chord', 'mfcc']
                         checked = ['original'] + [k for k in score_items if self.score_checkboxes[k].isChecked()]
                         weight = 1.0 / len(checked)
                         score_weights = {k: (weight if k in checked else 0.0) for k in ['original'] + score_items}
                         loops = self.music_looper.find_loop_pairs(
                             min_duration_multiplier=self.min_duration.value(),
-                            score_weights=score_weights
+                            score_weights=score_weights,
+                            memory_decision_callback=self.memory_decision_dialog,
+                            lang=self.locale
                         )
-                        self.all_loops = loops  # 儲存所有 LoopPair
+                        # 檢查是否需要啟用特殊分析模式
+                        if isinstance(loops, list) and len(loops) == 1:
+                            if loops[0] == "ORIGINAL_SCORE_ONLY":
+                                from handler import LoopHandler
+                                handler = LoopHandler(
+                                    path=self.path_edit.text(),
+                                    min_duration_multiplier=self.min_duration.value()
+                                )
+                                self.all_loops = handler.original_score_only_analysis(self.music_looper.mlaudio)
+                            elif loops[0] == "SMART_BATCH_ANALYSIS":
+                                from handler import LoopHandler
+                                handler = LoopHandler(
+                                    path=self.path_edit.text(),
+                                    min_duration_multiplier=self.min_duration.value()
+                                )
+                                self.all_loops = handler.smart_batch_analysis(self.music_looper.mlaudio)
+                            else:
+                                self.all_loops = []
+                        else:
+                            self.all_loops = loops
                 self.update_scores_and_table()
             finally:
                 self.results.blockSignals(False)
@@ -474,8 +441,13 @@ class MainWindow(QMainWindow):
         checked = ['original'] + [k for k in score_items if self.score_checkboxes[k].isChecked()]
         weight = 1.0 / len(checked)
         score_weights = {k: (weight if k in checked else 0.0) for k in ['original'] + score_items}
+        # 防呆：只處理 LoopPair 物件
+        loops = getattr(self, 'all_loops', [])
+        if not loops or not hasattr(loops[0], 'score'):
+            self.results.setRowCount(0)
+            return
         # 重新加權分數
-        for loop in getattr(self, 'all_loops', []):
+        for loop in loops:
             loop.score = (
                 score_weights['original'] * getattr(loop, 'original_score', 0) +
                 score_weights['structure'] * getattr(loop, 'structure_score', 0) +
@@ -483,7 +455,7 @@ class MainWindow(QMainWindow):
                 score_weights['mfcc'] * getattr(loop, 'mfcc_score', 0)
             )
         # 重新排序
-        sorted_loops = sorted(enumerate(getattr(self, 'all_loops', [])), key=lambda x: x[1].score, reverse=True)
+        sorted_loops = sorted(enumerate(loops), key=lambda x: x[1].score, reverse=True)
         self.results.setSortingEnabled(False)
         try:
             self.results.setRowCount(len(sorted_loops))

@@ -12,6 +12,7 @@ import numpy as np
 from analysis import LoopPair, find_best_loop_points # 移除 pymusiclooper.
 from audio import MLAudio
 from playback import PlaybackHandler
+from memory_utils import MemoryAnalyzer
 
 # Lazy-load external libraries when they're needed
 soundfile = lazy.load("soundfile")
@@ -36,6 +37,8 @@ class MusicLooper:
         brute_force: bool = False,
         disable_pruning: bool = False,
         score_weights: dict = None,
+        memory_decision_callback=None,
+        lang='zh_TW',
     ) -> List[LoopPair]:
         """Finds the best loop points for the track, according to the parameters specified.
 
@@ -55,6 +58,26 @@ class MusicLooper:
         Returns:
             List[LoopPair]: A list of `LoopPair` objects containing the loop points related data. See the `LoopPair` class for more info.
         """
+        # === 新增：記憶體預估與決策 ===
+        analyzer = MemoryAnalyzer(lang=lang)
+        audio_length_sec = self.mlaudio.total_duration
+        sample_rate = self.mlaudio.rate
+        n_channels = self.mlaudio.n_channels
+        mem_info = analyzer.estimate_memory_requirement(audio_length_sec, sample_rate, n_channels)
+        strategy = analyzer.recommend_strategy(mem_info)
+        
+        if strategy['risk_level'] in ["高", "中"]:
+            if memory_decision_callback:
+                user_choice = memory_decision_callback(mem_info, strategy)
+                if user_choice == "1":
+                    return ["ORIGINAL_SCORE_ONLY"]
+                elif user_choice == "2" or user_choice == "":
+                    return ["SMART_BATCH_ANALYSIS"]
+            else:
+                # 如果沒有回調函數，預設使用智能分批分析
+                return ["SMART_BATCH_ANALYSIS"]
+        
+        # === 原本的完整分析 ===
         return find_best_loop_points(
             mlaudio=self.mlaudio,
             min_duration_multiplier=min_duration_multiplier,
